@@ -89,13 +89,29 @@ const getNestedValue = (source, path) => {
   return path.split('.').reduce((current, key) => current?.[key], source);
 };
 
-const resolveRole = (profile) => {
-  const roleClaim = getNestedValue(profile, env.oidcRoleClaim);
-  if (Array.isArray(roleClaim) && roleClaim.includes(env.oidcAdminRoleValue)) {
-    return 'admin';
+const hasRoleValue = (roleClaim, roleValue) => {
+  if (!roleClaim || !roleValue) {
+    return false;
   }
 
-  if (roleClaim === env.oidcAdminRoleValue) {
+  if (Array.isArray(roleClaim)) {
+    return roleClaim.includes(roleValue);
+  }
+
+  if (typeof roleClaim === 'string') {
+    return roleClaim === roleValue;
+  }
+
+  if (typeof roleClaim === 'object') {
+    return Object.prototype.hasOwnProperty.call(roleClaim, roleValue);
+  }
+
+  return false;
+};
+
+const resolveRole = (profile) => {
+  const roleClaim = getNestedValue(profile, env.oidcRoleClaim);
+  if (hasRoleValue(roleClaim, env.oidcAdminRoleValue)) {
     return 'admin';
   }
 
