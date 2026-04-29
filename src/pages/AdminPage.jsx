@@ -19,6 +19,7 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [printingTestPage, setPrintingTestPage] = useState({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [printers, setPrinters] = useState([]);
@@ -135,6 +136,22 @@ export default function AdminPage() {
       await loadAdminData();
     } catch (requestError) {
       setError(requestError.message);
+    }
+  };
+
+  const handlePrintTestPage = async (printerId) => {
+    setPrintingTestPage((current) => ({ ...current, [printerId]: true }));
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await apiRequest(`/api/printers/${printerId}/test-page`, { method: 'POST' });
+      setSuccess(`Test page sent to ${response.printer.name}.`);
+      await loadAdminData();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setPrintingTestPage((current) => ({ ...current, [printerId]: false }));
     }
   };
 
@@ -312,6 +329,14 @@ export default function AdminPage() {
                         </button>
                         <button className="button-secondary" onClick={() => refreshPrinterStatus(printer.id)} type="button">
                           Live Queue
+                        </button>
+                        <button
+                          className="button-secondary"
+                          disabled={!printer.enabled || printingTestPage[printer.id]}
+                          onClick={() => handlePrintTestPage(printer.id)}
+                          type="button"
+                        >
+                          {printingTestPage[printer.id] ? 'Sending…' : 'Print Test Page'}
                         </button>
                         <button className="button-secondary" onClick={() => handleDeletePrinter(printer.id)} type="button">
                           Remove

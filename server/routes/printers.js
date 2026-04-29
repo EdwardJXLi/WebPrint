@@ -1,19 +1,27 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import express from 'express';
 import { z } from 'zod';
 
+import { env } from '../config/env.js';
 import {
+  createJob,
   createPrinter,
   deletePrinter,
   getPrinterById,
   listPrinters,
   syncDiscoveredPrinters,
+  updateJob,
   updatePrinter,
 } from '../db/index.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { AppError } from '../middleware/error.js';
-import { discoverCupsPrinters, getPrinterStatus, testPrinterConnectivity } from '../services/ipp.js';
+import { discoverCupsPrinters, getPrinterStatus, submitPrintJob, testPrinterConnectivity } from '../services/ipp.js';
+import { canCancelJob } from '../services/jobs.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { resolvePrinterUri, sanitizeText } from '../utils/sanitize.js';
+import { resolvePrinterUri, sanitizeFileName, sanitizeText } from '../utils/sanitize.js';
+import { createTestPagePdf } from '../utils/test-page-pdf.js';
 
 const router = express.Router();
 
@@ -59,6 +67,84 @@ router.post(
     const printers = listPrinters({ includeDisabled: true });
 
     res.json({ detectedPrinters, sync, printers });
+  }),
+);
+
+router.post(
+  '/:id/test-page',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const printer = getPrinterById(Number(req.params.id));
+    if (!printer) {
+      throw new AppError(404, 'Printer not found.');
+    }
+
+    if (!printer.enabled) {
+      throw new AppError(400, 'Enable this printer before printing a test page.');
+    }
+
+    const fileBuffer = createTestPagePdf({
+      appName: env.appName,
+      appBaseUrl: env.appBaseUrl,
+      printer,
+      user: req.user,
+    });
+    const originalFileName = sanitizeFileName(`${env.appName}_${printer.name}_Test_Page.pdf`);
+    const storedFileName = `${Date.now()}-${crypto.randomUUID()}.pdf`;
+    const filePath = path.join(env.uploadDir, storedFileName);
+
+    await fs.writeFile(filePath, fileBuffer);
+
+    const jobRecord = createJob({
+      userId: req.user.id,
+      printerId: printer.id,
+      originalFileName,
+      storedFileName,
+      filePath,
+      mimeType: 'application/pdf',
+      copies: 1,
+      duplex: 'one-sided',
+      colorMode: 'color',
+      status: 'submitting',
+      statusDetail: `Submitting ${env.appName} test page to CUPS`,
+    });
+
+    try {
+      const printResult = await submitPrintJob({
+        printerUri: printer.ipp_uri,
+        username: sanitizeText(req.user.email || req.user.name || 'webprint-user'),
+        fileBuffer,
+        fileName: originalFileName,
+        mimeType: 'application/pdf',
+        copies: 1,
+        duplex: 'one-sided',
+        colorMode: 'color',
+      });
+
+      const updatedJob = updateJob(jobRecord.id, {
+        status: printResult.status,
+        status_detail: printResult.statusDetail,
+        external_job_id: printResult.externalJobId,
+        external_job_uri: printResult.externalJobUri,
+      });
+
+      res.status(201).json({
+        printer,
+        job: { ...updatedJob, canCancel: canCancelJob(updatedJob, req.user) },
+      });
+    } catch (error) {
+      const failedJob = updateJob(jobRecord.id, {
+        status: 'error',
+        status_detail: error.message,
+        completed_at: new Date().toISOString(),
+      });
+
+      res.status(502).json({
+        printer,
+        job: { ...failedJob, canCancel: false },
+        error: 'Failed to submit the test page to CUPS.',
+      });
+    }
   }),
 );
 
