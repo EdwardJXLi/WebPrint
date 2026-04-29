@@ -31,6 +31,8 @@ const loadEnvFile = () => {
 
 loadEnvFile();
 
+const packageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
+
 const booleanish = z.preprocess((value) => {
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -61,6 +63,7 @@ const schema = z.object({
   APP_BASE_URL: z.string().url().default('http://localhost:3000'),
   APP_NAME: z.string().min(1).max(80).default('WebPrint'),
   LOGIN_BUTTON_TEXT: z.string().min(1).max(80).default('Continue'),
+  POWERED_BY_FOOTER_ENABLED: booleanish.default(true),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters.'),
   SESSION_COOKIE_SECURE: booleanish.optional(),
   TRUST_PROXY: booleanish.default(false),
@@ -94,7 +97,9 @@ const env = {
   port: parsed.PORT,
   appBaseUrl: parsed.APP_BASE_URL,
   appName: parsed.APP_NAME,
+  appVersion: packageJson.version || '0.0.0',
   loginButtonText: parsed.LOGIN_BUTTON_TEXT,
+  poweredByFooterEnabled: parsed.POWERED_BY_FOOTER_ENABLED,
   sessionSecret: parsed.SESSION_SECRET,
   sessionCookieSecure:
     parsed.SESSION_COOKIE_SECURE ?? parsed.NODE_ENV === 'production',

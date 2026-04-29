@@ -6,7 +6,9 @@ const AuthContext = createContext(null);
 
 const defaultConfig = {
   appName: 'WebPrint',
+  appVersion: '',
   loginButtonText: 'Continue',
+  poweredByFooterEnabled: true,
 };
 
 export function AuthProvider({ children }) {

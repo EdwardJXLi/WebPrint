@@ -64,7 +64,9 @@ router.get('/me', (req, res) => {
     user: req.user ? sanitizeUser(req.user) : null,
     config: {
       appName: env.appName,
+      appVersion: env.appVersion,
       loginButtonText: env.loginButtonText,
+      poweredByFooterEnabled: env.poweredByFooterEnabled,
     },
   });
 });

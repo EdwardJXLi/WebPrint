@@ -75,6 +75,7 @@ The app now runs behind a single Express port in development and production. Use
 | `APP_BASE_URL` | Yes | Public base URL for the backend and OIDC callback generation |
 | `APP_NAME` | No | Display name shown in the browser, header, and login screen; default `WebPrint` |
 | `LOGIN_BUTTON_TEXT` | No | Text shown on the SSO login button; default `Continue` |
+| `POWERED_BY_FOOTER_ENABLED` | No | Set to `false` to hide the small `Powered by WebPrint` footer; default `true` |
 | `SESSION_SECRET` | Yes | Long random secret for signed session cookies |
 | `SESSION_COOKIE_SECURE` | No | Set to `true` behind HTTPS |
 | `TRUST_PROXY` | No | Set to `true` when running behind a reverse proxy |

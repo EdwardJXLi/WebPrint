@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
 import Badge from './Badge.jsx';
+import PoweredByFooter from './PoweredByFooter.jsx';
 import PrinterMark from './PrinterMark.jsx';
 
 const navLinkClass = ({ isActive }) =>
@@ -13,7 +14,7 @@ export default function Layout({ children }) {
   const { config, logout, user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="flex min-h-screen flex-col bg-slate-100">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2.5">
@@ -51,7 +52,8 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8">{children}</main>
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-8">{children}</main>
+      <PoweredByFooter />
     </div>
   );
 }
