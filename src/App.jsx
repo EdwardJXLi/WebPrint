@@ -1,0 +1,50 @@
+import { Navigate, Route, Routes } from 'react-router-dom';
+
+import Layout from './components/Layout.jsx';
+import LoginScreen from './components/LoginScreen.jsx';
+import LoadingScreen from './components/LoadingScreen.jsx';
+import { useAuth } from './context/AuthContext.jsx';
+import AdminPage from './pages/AdminPage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
+import JobsPage from './pages/JobsPage.jsx';
+import NewJobPage from './pages/NewJobPage.jsx';
+
+function AdminOnlyRoute({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+export default function App() {
+  const { config, loading, user } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen label={`Loading ${config.appName}`} />;
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/jobs" element={<JobsPage />} />
+        <Route path="/jobs/new" element={<NewJobPage />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminOnlyRoute>
+              <AdminPage />
+            </AdminOnlyRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  );
+}

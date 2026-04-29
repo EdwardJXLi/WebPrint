@@ -1,0 +1,12 @@
+services:
+  cloudprint:
+    build:
+      context: .
+    container_name: cloudprint-portal
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./storage:/app/storage
+    restart: unless-stopped
