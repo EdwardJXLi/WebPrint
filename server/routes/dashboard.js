@@ -12,10 +12,10 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const stats = getDashboardStats({ role: req.user.role, userId: req.user.id });
-    const printers = listPrinters({ includeDisabled: req.user.role === 'admin' });
+    const stats = getDashboardStats({ userId: req.user.id });
+    const printers = listPrinters({ includeDisabled: false });
     const recentJobs = await refreshJobs(
-      listRecentJobs({ role: req.user.role, userId: req.user.id, limit: 8 }),
+      listRecentJobs({ userId: req.user.id, limit: 8 }),
     );
 
     res.json({

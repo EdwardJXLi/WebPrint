@@ -8,9 +8,9 @@ import { apiRequest } from '../lib/api.js';
 import { formatDateTime, titleCase } from '../utils/format.js';
 
 const statCards = [
-  { key: 'activeJobs', label: 'Active Jobs' },
-  { key: 'queuedJobs', label: 'Queued Jobs' },
-  { key: 'completedJobs', label: 'Completed Jobs' },
+  { key: 'activeJobs', label: 'My Active Jobs' },
+  { key: 'queuedJobs', label: 'My Queued Jobs' },
+  { key: 'completedJobs', label: 'My Completed Jobs' },
   { key: 'availablePrinters', label: 'Available Printers' },
 ];
 
@@ -46,7 +46,7 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-950">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">Printer availability and recent activity.</p>
+          <p className="mt-1 text-sm text-slate-500">Printer availability and your recent activity.</p>
         </div>
         <div className="hidden flex-wrap justify-end gap-2 sm:flex">
           <Link className="button-primary whitespace-nowrap" to="/jobs/new">
@@ -84,7 +84,7 @@ export default function DashboardPage() {
       <section className="grid gap-5 sm:gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="panel p-4 sm:p-6">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-slate-950">Recent Jobs</h2>
+            <h2 className="text-lg font-semibold text-slate-950">My Recent Jobs</h2>
             <Link className="text-sm font-medium text-green-700 hover:text-green-800" to="/jobs">
               View all
             </Link>

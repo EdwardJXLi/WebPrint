@@ -410,13 +410,12 @@ export const listJobs = ({ role, userId, statusGroup = 'all', limit = 100 }) =>
     return rows.map(mapJob);
   });
 
-export const listRecentJobs = ({ role, userId, limit = 8 }) =>
-  listJobs({ role, userId, limit, statusGroup: 'all' }).slice(0, limit);
+export const listRecentJobs = ({ userId, limit = 8 }) =>
+  listJobs({ role: 'user', userId, limit, statusGroup: 'all' }).slice(0, limit);
 
-export const getDashboardStats = ({ role, userId }) =>
+export const getDashboardStats = ({ userId }) =>
   safeDbCall('getDashboardStats', () => {
     const params = { userId };
-    const scopeWhere = role === 'admin' ? '' : 'WHERE user_id = @userId';
     const row = db
       .prepare(
         `
@@ -425,16 +424,14 @@ export const getDashboardStats = ({ role, userId }) =>
             SUM(CASE WHEN status = 'queued' OR status = 'pending' OR status = 'pending-held' THEN 1 ELSE 0 END) AS queuedJobs,
             SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completedJobs
           FROM jobs
-          ${scopeWhere}
+          WHERE user_id = @userId
         `,
       )
       .get(params);
 
     const printersRow = db
       .prepare(
-        role === 'admin'
-          ? 'SELECT COUNT(*) AS total FROM printers'
-          : 'SELECT COUNT(*) AS total FROM printers WHERE enabled = 1',
+        'SELECT COUNT(*) AS total FROM printers WHERE enabled = 1',
       )
       .get();
 
