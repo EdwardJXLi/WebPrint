@@ -4,10 +4,11 @@ import { env } from '../config/env.js';
 import { AppError } from '../middleware/error.js';
 
 const CUPS_GET_PRINTERS_OPERATION = 0x4002;
+const ippRuntime = ipp as any;
 
-if (!ipp.operations['CUPS-Get-Printers']) {
-  ipp.operations['CUPS-Get-Printers'] = CUPS_GET_PRINTERS_OPERATION;
-  ipp.operations.lookup[CUPS_GET_PRINTERS_OPERATION] = 'CUPS-Get-Printers';
+if (!ippRuntime.operations['CUPS-Get-Printers']) {
+  ippRuntime.operations['CUPS-Get-Printers'] = CUPS_GET_PRINTERS_OPERATION;
+  ippRuntime.operations.lookup[CUPS_GET_PRINTERS_OPERATION] = 'CUPS-Get-Printers';
 }
 
 const asArray = (value) => {
@@ -77,9 +78,9 @@ const queueNameFromUri = (printerUri) => {
   }
 };
 
-const execute = (printerUri, operation, payload) =>
+const execute = (printerUri, operation, payload): Promise<any> =>
   new Promise((resolve, reject) => {
-    const printer = ipp.Printer(httpTransportUri(printerUri));
+    const printer = ippRuntime.Printer(httpTransportUri(printerUri));
     printer.execute(operation, payload, (error, response) => {
       if (error) {
         reject(new AppError(502, `IPP request failed: ${error.message}`));

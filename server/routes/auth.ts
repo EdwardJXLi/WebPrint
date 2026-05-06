@@ -26,7 +26,7 @@ const authLimiter = rateLimit({
 });
 
 const regenerateSession = (req) =>
-  new Promise((resolve, reject) => {
+  new Promise<void>((resolve, reject) => {
     req.session.regenerate((error) => {
       if (error) {
         reject(error);
@@ -38,7 +38,7 @@ const regenerateSession = (req) =>
   });
 
 const destroySession = (req) =>
-  new Promise((resolve, reject) => {
+  new Promise<void>((resolve, reject) => {
     req.session.destroy((error) => {
       if (error) {
         reject(error);

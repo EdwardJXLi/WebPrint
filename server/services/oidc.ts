@@ -8,7 +8,7 @@ let clientPromise;
 const getClient = async () => {
   if (!clientPromise) {
     clientPromise = Issuer.discover(env.oidcDiscoveryUrl).then((issuer) => {
-      const clientConfig = {
+      const clientConfig: Record<string, unknown> = {
         client_id: env.oidcClientId,
         redirect_uris: [env.oidcRedirectUri],
         response_types: ['code'],
@@ -20,7 +20,7 @@ const getClient = async () => {
         clientConfig.token_endpoint_auth_method = 'none';
       }
 
-      return new issuer.Client(clientConfig);
+      return new issuer.Client(clientConfig as any);
     });
   }
 

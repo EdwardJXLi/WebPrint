@@ -1,6 +1,6 @@
-import { useAuth } from '../context/AuthContext.jsx';
-import PoweredByFooter from './PoweredByFooter.jsx';
-import PrinterMark from './PrinterMark.jsx';
+import { useAuth } from '../context/useAuth';
+import PoweredByFooter from './PoweredByFooter';
+import PrinterMark from './PrinterMark';
 
 export default function LoginScreen() {
   const { config, login } = useAuth();

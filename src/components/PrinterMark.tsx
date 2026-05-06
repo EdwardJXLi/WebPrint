@@ -1,4 +1,4 @@
-export default function PrinterMark({ className = '' }) {
+export default function PrinterMark({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center rounded-md bg-green-700 text-white ${className}`}>
       <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">

@@ -1,6 +1,6 @@
 # WebPrint
 
-WebPrint is a self-hosted web print management portal with an Express backend, React SPA frontend, SQLite persistence, and IPP/CUPS integration.
+WebPrint is a self-hosted web print management portal with a TypeScript Express backend, TypeScript React SPA frontend, SQLite persistence, and IPP/CUPS integration.
 
 ## Features
 
@@ -16,8 +16,8 @@ WebPrint is a self-hosted web print management portal with an Express backend, R
 
 ## Stack
 
-- Backend: Node.js, Express, `openid-client`, `better-sqlite3`, `ipp`
-- Frontend: React, React Router, Tailwind CSS, Vite (embedded into Express during development)
+- Backend: TypeScript, Node.js, Express, `openid-client`, `better-sqlite3`, `ipp`
+- Frontend: TypeScript, React, React Router, Tailwind CSS, Vite (embedded into Express during development)
 - Persistence: SQLite
 
 ## Project Layout
@@ -106,7 +106,7 @@ Make sure the Node container can resolve and reach the CUPS host on the network.
 
 ## Production Build
 
-Build the frontend bundle:
+Build the frontend and compiled server:
 
 ```bash
 npm run build
@@ -154,6 +154,7 @@ The container:
 ## Linting
 
 ```bash
+npm run typecheck
 npm run lint
 ```
 

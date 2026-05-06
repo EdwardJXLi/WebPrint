@@ -1,11 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import EmptyState from '../components/EmptyState.jsx';
-import LoadingScreen from '../components/LoadingScreen.jsx';
-import { apiRequest } from '../lib/api.js';
+import EmptyState from '../components/EmptyState';
+import LoadingScreen from '../components/LoadingScreen';
+import { apiRequest } from '../lib/api';
+import type { Printer } from '../types';
+import { getErrorMessage } from '../utils/errors';
 
-const initialState = {
+type NewJobForm = {
+  printerId: string;
+  copies: number;
+  duplex: string;
+  colorMode: string;
+  file: File | null;
+};
+
+const initialState: NewJobForm = {
   printerId: '',
   copies: 1,
   duplex: 'one-sided',
@@ -19,16 +29,16 @@ export default function NewJobPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [printers, setPrinters] = useState([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
   const [form, setForm] = useState(initialState);
 
   useEffect(() => {
     const loadPrinters = async () => {
       try {
-        const data = await apiRequest('/api/printers');
+        const data = await apiRequest<{ printers: Printer[] }>('/api/printers');
         setPrinters(data.printers.filter((printer) => printer.enabled));
       } catch (requestError) {
-        setError(requestError.message);
+        setError(getErrorMessage(requestError));
       } finally {
         setLoading(false);
       }
@@ -37,7 +47,7 @@ export default function NewJobPage() {
     loadPrinters();
   }, []);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setSuccess('');
@@ -66,7 +76,7 @@ export default function NewJobPage() {
       setForm({ ...initialState, printerId: form.printerId || '' });
       setTimeout(() => navigate('/jobs'), 700);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setSaving(false);
     }

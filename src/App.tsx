@@ -1,15 +1,16 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import Layout from './components/Layout.jsx';
-import LoginScreen from './components/LoginScreen.jsx';
-import LoadingScreen from './components/LoadingScreen.jsx';
-import { useAuth } from './context/AuthContext.jsx';
-import AdminPage from './pages/AdminPage.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import JobsPage from './pages/JobsPage.jsx';
-import NewJobPage from './pages/NewJobPage.jsx';
+import Layout from './components/Layout';
+import LoginScreen from './components/LoginScreen';
+import LoadingScreen from './components/LoadingScreen';
+import { useAuth } from './context/useAuth';
+import AdminPage from './pages/AdminPage';
+import DashboardPage from './pages/DashboardPage';
+import JobsPage from './pages/JobsPage';
+import NewJobPage from './pages/NewJobPage';
+import type { ReactNode } from 'react';
 
-function AdminOnlyRoute({ children }) {
+function AdminOnlyRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   if (user?.role !== 'admin') {
     return <Navigate to="/" replace />;

@@ -1,33 +1,52 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import Badge from '../components/Badge.jsx';
-import EmptyState from '../components/EmptyState.jsx';
-import LoadingScreen from '../components/LoadingScreen.jsx';
-import { apiRequest } from '../lib/api.js';
-import { formatDateTime, titleCase } from '../utils/format.js';
+import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
+import LoadingScreen from '../components/LoadingScreen';
+import { apiRequest } from '../lib/api';
+import type { DashboardStats, Job, Printer } from '../types';
+import { getErrorMessage } from '../utils/errors';
+import { formatDateTime, titleCase } from '../utils/format';
 
 const statCards = [
   { key: 'activeJobs', label: 'My Active Jobs' },
   { key: 'queuedJobs', label: 'My Queued Jobs' },
   { key: 'completedJobs', label: 'My Completed Jobs' },
   { key: 'availablePrinters', label: 'Available Printers' },
-];
+] as const;
+
+interface DashboardResponse {
+  stats: DashboardStats;
+  printers: Printer[];
+  recentJobs: Job[];
+}
+
+const emptyDashboard: DashboardResponse = {
+  stats: {
+    activeJobs: 0,
+    queuedJobs: 0,
+    completedJobs: 0,
+    availablePrinters: 0,
+  },
+  printers: [],
+  recentJobs: [],
+};
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [data, setData] = useState({ stats: {}, printers: [], recentJobs: [] });
+  const [data, setData] = useState<DashboardResponse>(emptyDashboard);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError('');
 
     try {
-      const response = await apiRequest('/api/dashboard');
+      const response = await apiRequest<DashboardResponse>('/api/dashboard');
       setData(response);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setLoading(false);
     }

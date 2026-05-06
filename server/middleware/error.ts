@@ -1,9 +1,13 @@
 import fs from 'node:fs/promises';
+import type { ErrorRequestHandler, NextFunction, RequestHandler } from 'express';
 
 import { logger } from '../utils/logger.js';
 
 class AppError extends Error {
-  constructor(statusCode, message, details) {
+  statusCode: number;
+  details?: unknown;
+
+  constructor(statusCode: number, message: string, details?: unknown) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
@@ -11,11 +15,17 @@ class AppError extends Error {
   }
 }
 
-const notFound = (_req, _res, next) => {
+const notFound: RequestHandler = (_req, _res, next: NextFunction) => {
   next(new AppError(404, 'Route not found.'));
 };
 
-const errorHandler = async (error, req, res, _next) => {
+type RequestError = Error & {
+  code?: string;
+  statusCode?: number;
+  details?: unknown;
+};
+
+const errorHandler: ErrorRequestHandler = async (error: RequestError, req, res, _next) => {
   const statusCode = error.code === 'LIMIT_FILE_SIZE' ? 400 : error.statusCode || 500;
   const publicMessage =
     error.code === 'LIMIT_FILE_SIZE'

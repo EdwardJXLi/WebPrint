@@ -1,16 +1,17 @@
 import { NavLink } from 'react-router-dom';
+import type { ReactNode } from 'react';
 
-import { useAuth } from '../context/AuthContext.jsx';
-import Badge from './Badge.jsx';
-import PoweredByFooter from './PoweredByFooter.jsx';
-import PrinterMark from './PrinterMark.jsx';
+import { useAuth } from '../context/useAuth';
+import Badge from './Badge';
+import PoweredByFooter from './PoweredByFooter';
+import PrinterMark from './PrinterMark';
 
-const navLinkClass = ({ isActive }) =>
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-md px-2.5 py-1.5 text-sm font-medium transition sm:px-3 sm:py-2 ${
     isActive ? 'bg-green-50 text-green-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
   }`;
 
-export default function Layout({ children }) {
+export default function Layout({ children }: { children: ReactNode }) {
   const { config, logout, user } = useAuth();
 
   return (

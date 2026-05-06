@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon --watch server --watch src --watch index.html --watch vite.config.js --watch tailwind.config.js --watch postcss.config.js --ext js,mjs,cjs,json,jsx,css,html server/index.js",
-    "build": "vite build",
-    "start": "node server/index.js",
+    "dev": "nodemon --watch server --watch src --watch index.html --watch vite.config.ts --watch tailwind.config.js --watch postcss.config.js --ext ts,tsx,json,css,html --exec tsx server/index.ts",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "start": "node dist/server/index.js",
+    "typecheck": "tsc -b tsconfig.client.json tsconfig.server.json",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -25,6 +28,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^4.17.25",
+    "@types/express-session": "^1.19.0",
+    "@types/ipp": "^2.0.5",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.22.0",
@@ -35,6 +46,9 @@
     "nodemon": "^3.1.9",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
     "vite": "^5.4.14"
   }
 }

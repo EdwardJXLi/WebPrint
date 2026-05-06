@@ -1,12 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 
-import Badge from '../components/Badge.jsx';
-import EmptyState from '../components/EmptyState.jsx';
-import LoadingScreen from '../components/LoadingScreen.jsx';
-import { apiRequest } from '../lib/api.js';
-import { formatDateTime, titleCase } from '../utils/format.js';
+import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
+import LoadingScreen from '../components/LoadingScreen';
+import { apiRequest } from '../lib/api';
+import type { Job, Printer, PrinterStatus } from '../types';
+import { getErrorMessage } from '../utils/errors';
+import { formatDateTime, titleCase } from '../utils/format';
 
-const initialPrinterForm = {
+type PrinterForm = {
+  id: number | null;
+  name: string;
+  ippUri: string;
+  description: string;
+  enabled: boolean;
+};
+
+type SyncResponse = {
+  sync: {
+    created: Printer[];
+    updated: Printer[];
+    skipped: unknown[];
+  };
+  printers: Printer[];
+};
+
+const initialPrinterForm: PrinterForm = {
   id: null,
   name: '',
   ippUri: '',
@@ -19,12 +38,12 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [detecting, setDetecting] = useState(false);
-  const [printingTestPage, setPrintingTestPage] = useState({});
+  const [printingTestPage, setPrintingTestPage] = useState<Record<number, boolean>>({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [printers, setPrinters] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [liveStatus, setLiveStatus] = useState({});
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [liveStatus, setLiveStatus] = useState<Record<number, PrinterStatus>>({});
   const [printerForm, setPrinterForm] = useState(initialPrinterForm);
 
   const loadAdminData = useCallback(async () => {
@@ -33,13 +52,13 @@ export default function AdminPage() {
 
     try {
       const [printerResponse, jobResponse] = await Promise.all([
-        apiRequest('/api/printers'),
-        apiRequest('/api/jobs?status=all'),
+        apiRequest<{ printers: Printer[] }>('/api/printers'),
+        apiRequest<{ jobs: Job[] }>('/api/jobs?status=all'),
       ]);
       setPrinters(printerResponse.printers);
       setJobs(jobResponse.jobs);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setLoading(false);
     }
@@ -53,7 +72,7 @@ export default function AdminPage() {
     setPrinterForm(initialPrinterForm);
   };
 
-  const handleSavePrinter = async (event) => {
+  const handleSavePrinter = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
     setError('');
@@ -78,7 +97,7 @@ export default function AdminPage() {
       setPrinterForm(initialPrinterForm);
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setSaving(false);
     }
@@ -90,7 +109,7 @@ export default function AdminPage() {
     setSuccess('');
 
     try {
-      const response = await apiRequest('/api/printers/test', {
+      const response = await apiRequest<{ status: { printerState: string; stateMessage: string | null } }>('/api/printers/test', {
         method: 'POST',
         body: { ippUri: printerForm.ippUri },
       });
@@ -100,7 +119,7 @@ export default function AdminPage() {
         }`,
       );
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setTesting(false);
     }
@@ -112,7 +131,7 @@ export default function AdminPage() {
     setSuccess('');
 
     try {
-      const response = await apiRequest('/api/printers/sync', { method: 'POST' });
+      const response = await apiRequest<SyncResponse>('/api/printers/sync', { method: 'POST' });
       const createdCount = response.sync.created.length;
       const updatedCount = response.sync.updated.length;
       const skippedCount = response.sync.skipped.length;
@@ -124,52 +143,52 @@ export default function AdminPage() {
         }.`,
       );
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setDetecting(false);
     }
   };
 
-  const handleDeletePrinter = async (printerId) => {
+  const handleDeletePrinter = async (printerId: number) => {
     try {
       await apiRequest(`/api/printers/${printerId}`, { method: 'DELETE' });
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     }
   };
 
-  const handlePrintTestPage = async (printerId) => {
+  const handlePrintTestPage = async (printerId: number) => {
     setPrintingTestPage((current) => ({ ...current, [printerId]: true }));
     setError('');
     setSuccess('');
 
     try {
-      const response = await apiRequest(`/api/printers/${printerId}/test-page`, { method: 'POST' });
+      const response = await apiRequest<{ printer: Printer }>(`/api/printers/${printerId}/test-page`, { method: 'POST' });
       setSuccess(`Test page sent to ${response.printer.name}.`);
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setPrintingTestPage((current) => ({ ...current, [printerId]: false }));
     }
   };
 
-  const refreshPrinterStatus = async (printerId) => {
+  const refreshPrinterStatus = async (printerId: number) => {
     try {
-      const response = await apiRequest(`/api/printers/${printerId}/status`);
+      const response = await apiRequest<{ status: PrinterStatus }>(`/api/printers/${printerId}/status`);
       setLiveStatus((current) => ({ ...current, [printerId]: response.status }));
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     }
   };
 
-  const cancelJob = async (jobId) => {
+  const cancelJob = async (jobId: number) => {
     try {
       await apiRequest(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     }
   };
 

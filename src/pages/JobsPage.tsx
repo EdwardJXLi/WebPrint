@@ -1,34 +1,38 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import Badge from '../components/Badge.jsx';
-import EmptyState from '../components/EmptyState.jsx';
-import LoadingScreen from '../components/LoadingScreen.jsx';
-import { apiRequest } from '../lib/api.js';
-import { formatDateTime, titleCase } from '../utils/format.js';
+import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
+import LoadingScreen from '../components/LoadingScreen';
+import { apiRequest } from '../lib/api';
+import type { Job } from '../types';
+import { getErrorMessage } from '../utils/errors';
+import { formatDateTime, titleCase } from '../utils/format';
 
 const filters = [
   { key: 'all', label: 'All jobs' },
   { key: 'active', label: 'Active' },
   { key: 'completed', label: 'Completed' },
-];
+] as const;
 
-const colorModeLabel = (value) => (value === 'monochrome' ? 'grayscale' : 'color');
+type JobFilter = (typeof filters)[number]['key'];
+
+const colorModeLabel = (value: string) => (value === 'monochrome' ? 'grayscale' : 'color');
 
 export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [jobs, setJobs] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState<JobFilter>('all');
+  const [jobs, setJobs] = useState<Job[]>([]);
 
   const loadJobs = useCallback(async (filter = selectedFilter) => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await apiRequest(`/api/jobs?status=${filter}`);
+      const data = await apiRequest<{ jobs: Job[] }>(`/api/jobs?status=${filter}`);
       setJobs(data.jobs);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     } finally {
       setLoading(false);
     }
@@ -40,12 +44,12 @@ export default function JobsPage() {
 
   const sortedJobs = useMemo(() => jobs, [jobs]);
 
-  const cancelJob = async (jobId) => {
+  const cancelJob = async (jobId: number) => {
     try {
       await apiRequest(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
       await loadJobs(selectedFilter);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(getErrorMessage(requestError));
     }
   };
 

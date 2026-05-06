@@ -1,7 +1,18 @@
 import session from 'express-session';
+import type { Database, Statement } from 'better-sqlite3';
+import type { SessionData } from 'express-session';
+
+type SessionCallback = (error?: unknown, session?: SessionData | null) => void;
 
 class SQLiteSessionStore extends session.Store {
-  constructor(db) {
+  private db: Database;
+  private getStatement: Statement<[string], { sess: string; expiresAt: number }>;
+  private setStatement: Statement<[Record<string, unknown>]>;
+  private destroyStatement: Statement<[string]>;
+  private cleanupStatement: Statement<[number]>;
+  private cleanupTimer: NodeJS.Timeout;
+
+  constructor(db: Database) {
     super();
     this.db = db;
 
@@ -25,7 +36,7 @@ class SQLiteSessionStore extends session.Store {
     this.cleanupTimer.unref();
   }
 
-  get(sid, callback) {
+  get(sid: string, callback: SessionCallback) {
     try {
       const row = this.getStatement.get(sid);
       if (!row) {
@@ -37,13 +48,13 @@ class SQLiteSessionStore extends session.Store {
         return callback(null, null);
       }
 
-      return callback(null, JSON.parse(row.sess));
+        return callback(null, JSON.parse(row.sess) as SessionData);
     } catch (error) {
       return callback(error);
     }
   }
 
-  set(sid, sess, callback = () => {}) {
+  set(sid: string, sess: SessionData, callback: (error?: unknown) => void = () => {}) {
     try {
       const expiresAt = this.#resolveExpiration(sess);
       this.setStatement.run({
@@ -57,7 +68,7 @@ class SQLiteSessionStore extends session.Store {
     }
   }
 
-  destroy(sid, callback = () => {}) {
+  destroy(sid: string, callback: (error?: unknown) => void = () => {}) {
     try {
       this.destroyStatement.run(sid);
       callback(null);
@@ -66,7 +77,7 @@ class SQLiteSessionStore extends session.Store {
     }
   }
 
-  touch(sid, sess, callback = () => {}) {
+  touch(sid: string, sess: SessionData, callback: (error?: unknown) => void = () => {}) {
     this.set(sid, sess, callback);
   }
 
@@ -74,7 +85,7 @@ class SQLiteSessionStore extends session.Store {
     this.cleanupStatement.run(Date.now());
   }
 
-  #resolveExpiration(sess) {
+  #resolveExpiration(sess: SessionData) {
     if (sess?.cookie?.expires) {
       return new Date(sess.cookie.expires).getTime();
     }

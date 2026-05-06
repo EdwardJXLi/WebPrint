@@ -1,4 +1,4 @@
-export default function EmptyState({ title, description }) {
+export default function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <div className="panel flex min-h-40 items-center justify-center px-6 py-10 text-center">
       <div>

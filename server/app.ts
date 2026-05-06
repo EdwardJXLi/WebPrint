@@ -3,7 +3,6 @@ import session from 'express-session';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import { promises as fsPromises } from 'node:fs';
 
@@ -19,9 +18,7 @@ import jobsRouter from './routes/jobs.js';
 import dashboardRouter from './routes/dashboard.js';
 import { requestLogger } from './utils/logger.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
+const projectRoot = process.cwd();
 const clientDistDir = path.resolve(projectRoot, 'dist/client');
 const clientHtmlPath = path.resolve(projectRoot, 'index.html');
 
@@ -33,7 +30,7 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' },
 });
 
-const shouldBypassSpa = (requestPath) =>
+const shouldBypassSpa = (requestPath: string) =>
   requestPath.startsWith('/api/') || requestPath === '/auth/callback' || requestPath === '/health';
 
 const createApp = async () => {
@@ -99,7 +96,7 @@ const createApp = async () => {
   if (env.nodeEnv === 'development') {
     const { createServer } = await import('vite');
     const vite = await createServer({
-      configFile: path.resolve(projectRoot, 'vite.config.js'),
+      configFile: path.resolve(projectRoot, 'vite.config.ts'),
       server: {
         middlewareMode: true,
       },
@@ -117,7 +114,7 @@ const createApp = async () => {
         const html = await vite.transformIndexHtml(req.originalUrl, template);
         return res.status(200).contentType('text/html').send(html);
       } catch (error) {
-        vite.ssrFixStacktrace(error);
+        vite.ssrFixStacktrace(error as Error);
         return next(error);
       }
     });

@@ -1,4 +1,4 @@
-export default function LoadingScreen({ label = 'Loading' }) {
+export default function LoadingScreen({ label = 'Loading' }: { label?: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-6">
       <div className="panel w-full max-w-md p-8 text-center">

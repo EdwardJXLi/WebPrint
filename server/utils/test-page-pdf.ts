@@ -109,7 +109,7 @@ const createTestPagePdf = ({ appName, appBaseUrl, printer, user, generatedAt = n
   content += text(54, 392, 13, 'Color Test', { bold: true });
   content += line(54, 381, 558, 381);
 
-  const colors = [
+  const colors: [string, [number, number, number], [number, number, number]][] = [
     ['Black', [0, 0, 0], [1, 1, 1]],
     ['Cyan', [0, 0.68, 0.9], [0, 0, 0]],
     ['Magenta', [0.92, 0, 0.52], [1, 1, 1]],

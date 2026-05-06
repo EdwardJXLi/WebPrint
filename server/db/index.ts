@@ -1,12 +1,14 @@
 import Database from 'better-sqlite3';
+import type { ColumnDefinition, Database as SqliteDatabase } from 'better-sqlite3';
 
 import { env, ensureRuntimeDirectories } from '../config/env.js';
 import { AppError } from '../middleware/error.js';
+import type { JobRow, JobStatusGroup, PrinterRow, UserRole, UserRow } from '../types.js';
 import { logger } from '../utils/logger.js';
 
 ensureRuntimeDirectories();
 
-const db = new Database(env.sqlitePath);
+const db: SqliteDatabase = new Database(env.sqlitePath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -62,8 +64,8 @@ db.exec(`
   );
 `);
 
-const ensureColumn = ({ table, name, definition }) => {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+const ensureColumn = ({ table, name, definition }: { table: string; name: string; definition: string }) => {
+  const columns = db.prepare<[], ColumnDefinition>(`PRAGMA table_info(${table})`).all();
   if (!columns.some((column) => column.name === name)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
   }
@@ -75,10 +77,10 @@ ensureColumn({
   definition: "TEXT NOT NULL DEFAULT 'color'",
 });
 
-const safeDbCall = (label, fn) => {
+const safeDbCall = <T>(label: string, fn: () => T): T => {
   try {
     return fn();
-  } catch (error) {
+  } catch (error: any) {
     logger.error(`Database error in ${label}`, { message: error.message });
 
     if (String(error.code || '').startsWith('SQLITE_CONSTRAINT')) {
@@ -91,7 +93,7 @@ const safeDbCall = (label, fn) => {
 
 const nowIso = () => new Date().toISOString();
 
-const mapPrinter = (row) => {
+const mapPrinter = (row: any): PrinterRow | null => {
   if (!row) {
     return null;
   }
@@ -102,7 +104,7 @@ const mapPrinter = (row) => {
   };
 };
 
-const mapJob = (row) => {
+const mapJob = (row: any): JobRow | null => {
   if (!row) {
     return null;
   }
@@ -114,7 +116,19 @@ const mapJob = (row) => {
   };
 };
 
-export const upsertUser = ({ subject, email, name, picture, role }) =>
+export const upsertUser = ({
+  subject,
+  email,
+  name,
+  picture,
+  role,
+}: {
+  subject: string;
+  email: string | null;
+  name: string;
+  picture: string | null;
+  role: UserRole;
+}): UserRow =>
   safeDbCall('upsertUser', () => {
     const timestamp = nowIso();
     db.prepare(
@@ -132,13 +146,13 @@ export const upsertUser = ({ subject, email, name, picture, role }) =>
       `,
     ).run({ subject, email, name, picture, role, timestamp });
 
-    return db.prepare('SELECT * FROM users WHERE oidc_subject = ?').get(subject);
+    return db.prepare<[string], UserRow>('SELECT * FROM users WHERE oidc_subject = ?').get(subject)!;
   });
 
-export const getUserById = (id) =>
-  safeDbCall('getUserById', () => db.prepare('SELECT * FROM users WHERE id = ?').get(id));
+export const getUserById = (id: number): UserRow | undefined =>
+  safeDbCall('getUserById', () => db.prepare<[number], UserRow>('SELECT * FROM users WHERE id = ?').get(id));
 
-export const listPrinters = ({ includeDisabled = false } = {}) =>
+export const listPrinters = ({ includeDisabled = false }: { includeDisabled?: boolean } = {}): PrinterRow[] =>
   safeDbCall('listPrinters', () => {
     const query = includeDisabled
       ? 'SELECT * FROM printers ORDER BY name ASC'
@@ -147,10 +161,20 @@ export const listPrinters = ({ includeDisabled = false } = {}) =>
     return db.prepare(query).all().map(mapPrinter);
   });
 
-export const getPrinterById = (id) =>
+export const getPrinterById = (id: number | bigint): PrinterRow | null =>
   safeDbCall('getPrinterById', () => mapPrinter(db.prepare('SELECT * FROM printers WHERE id = ?').get(id)));
 
-export const createPrinter = ({ name, ippUri, description, enabled }) =>
+export const createPrinter = ({
+  name,
+  ippUri,
+  description,
+  enabled,
+}: {
+  name: string;
+  ippUri: string;
+  description: string;
+  enabled: boolean;
+}): PrinterRow | null =>
   safeDbCall('createPrinter', () => {
     const timestamp = nowIso();
     const result = db
@@ -171,11 +195,17 @@ export const createPrinter = ({ name, ippUri, description, enabled }) =>
     return getPrinterById(result.lastInsertRowid);
   });
 
-export const syncDiscoveredPrinters = (discoveredPrinters) =>
+interface DiscoveredPrinterInput {
+  name: string;
+  ippUri: string;
+  description: string;
+}
+
+export const syncDiscoveredPrinters = (discoveredPrinters: DiscoveredPrinterInput[]) =>
   safeDbCall('syncDiscoveredPrinters', () => {
     const timestamp = nowIso();
-    const selectByUri = db.prepare('SELECT * FROM printers WHERE ipp_uri = ?');
-    const selectByName = db.prepare('SELECT * FROM printers WHERE name = ?');
+    const selectByUri = db.prepare<[string], PrinterRow>('SELECT * FROM printers WHERE ipp_uri = ?');
+    const selectByName = db.prepare<[string], PrinterRow>('SELECT * FROM printers WHERE name = ?');
     const insertPrinter = db.prepare(
       `
         INSERT INTO printers (name, ipp_uri, description, enabled, created_at, updated_at)
@@ -193,13 +223,17 @@ export const syncDiscoveredPrinters = (discoveredPrinters) =>
       `,
     );
 
-    const summary = {
+    const summary: {
+      created: (PrinterRow | null)[];
+      updated: (PrinterRow | null)[];
+      skipped: { name: string; ippUri: string; reason: string }[];
+    } = {
       created: [],
       updated: [],
       skipped: [],
     };
 
-    const syncTransaction = db.transaction((printers) => {
+    const syncTransaction = db.transaction((printers: DiscoveredPrinterInput[]) => {
       for (const printer of printers) {
         const existingByUri = selectByUri.get(printer.ippUri);
         const existingByName = selectByName.get(printer.name);
@@ -240,7 +274,10 @@ export const syncDiscoveredPrinters = (discoveredPrinters) =>
     return summary;
   });
 
-export const updatePrinter = (id, fields) =>
+export const updatePrinter = (
+  id: number,
+  fields: { name: string; ippUri: string; description: string; enabled: boolean },
+): PrinterRow | null =>
   safeDbCall('updatePrinter', () => {
     const payload = {
       name: fields.name,
@@ -266,10 +303,25 @@ export const updatePrinter = (id, fields) =>
     return getPrinterById(id);
   });
 
-export const deletePrinter = (id) =>
+export const deletePrinter = (id: number) =>
   safeDbCall('deletePrinter', () => db.prepare('DELETE FROM printers WHERE id = ?').run(id));
 
-export const createJob = (job) =>
+export const createJob = (job: {
+  userId: number;
+  printerId: number;
+  originalFileName: string;
+  storedFileName: string;
+  filePath: string;
+  mimeType: string;
+  copies: number;
+  duplex: string;
+  colorMode: string;
+  status: string;
+  statusDetail?: string | null;
+  externalJobId?: number | null;
+  externalJobUri?: string | null;
+  completedAt?: string | null;
+}): JobRow =>
   safeDbCall('createJob', () => {
     const timestamp = nowIso();
     const result = db
@@ -331,14 +383,14 @@ export const createJob = (job) =>
         timestamp,
       });
 
-    return getJobById(result.lastInsertRowid);
+    return getJobById(result.lastInsertRowid)!;
   });
 
-export const updateJob = (id, fields) =>
+export const updateJob = (id: number | bigint, fields: Record<string, unknown>): JobRow =>
   safeDbCall('updateJob', () => {
     const entries = Object.entries(fields).filter(([, value]) => value !== undefined);
     if (!entries.length) {
-      return getJobById(id);
+      return getJobById(id)!;
     }
 
     const payload = Object.fromEntries(entries);
@@ -351,7 +403,7 @@ export const updateJob = (id, fields) =>
       .join(', ');
 
     db.prepare(`UPDATE jobs SET ${assignments} WHERE id = @id`).run(payload);
-    return getJobById(id);
+    return getJobById(id)!;
   });
 
 const jobSelect = `
@@ -368,7 +420,7 @@ const jobSelect = `
   INNER JOIN users ON users.id = jobs.user_id
 `;
 
-export const getJobById = (id) =>
+export const getJobById = (id: number | bigint): JobRow | null =>
   safeDbCall('getJobById', () =>
     mapJob(db.prepare(`${jobSelect} WHERE jobs.id = ?`).get(id)),
   );
@@ -376,10 +428,20 @@ export const getJobById = (id) =>
 const activeStatuses = ['queued', 'pending', 'pending-held', 'processing', 'processing-stopped', 'submitting'];
 const completedStatuses = ['completed', 'canceled', 'aborted', 'error'];
 
-export const listJobs = ({ role, userId, statusGroup = 'all', limit = 100 }) =>
+export const listJobs = ({
+  role,
+  userId,
+  statusGroup = 'all',
+  limit = 100,
+}: {
+  role: UserRole;
+  userId: number;
+  statusGroup?: JobStatusGroup;
+  limit?: number;
+}): JobRow[] =>
   safeDbCall('listJobs', () => {
     const whereClauses = [];
-    const params = { limit };
+    const params: Record<string, string | number> = { limit };
 
     if (role !== 'admin') {
       whereClauses.push('jobs.user_id = @userId');
@@ -410,10 +472,10 @@ export const listJobs = ({ role, userId, statusGroup = 'all', limit = 100 }) =>
     return rows.map(mapJob);
   });
 
-export const listRecentJobs = ({ userId, limit = 8 }) =>
+export const listRecentJobs = ({ userId, limit = 8 }: { userId: number; limit?: number }) =>
   listJobs({ role: 'user', userId, limit, statusGroup: 'all' }).slice(0, limit);
 
-export const getDashboardStats = ({ userId }) =>
+export const getDashboardStats = ({ userId }: { userId: number }) =>
   safeDbCall('getDashboardStats', () => {
     const params = { userId };
     const row = db
@@ -427,13 +489,13 @@ export const getDashboardStats = ({ userId }) =>
           WHERE user_id = @userId
         `,
       )
-      .get(params);
+      .get(params) as { activeJobs?: number; queuedJobs?: number; completedJobs?: number } | undefined;
 
     const printersRow = db
       .prepare(
         'SELECT COUNT(*) AS total FROM printers WHERE enabled = 1',
       )
-      .get();
+      .get() as { total?: number } | undefined;
 
     return {
       activeJobs: row?.activeJobs || 0,
