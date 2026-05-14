@@ -85,6 +85,7 @@ router.post(
 
     const fileBuffer = createTestPagePdf({
       appName: env.appName,
+      appVersion: env.appVersion,
       appBaseUrl: env.appBaseUrl,
       printer,
       user: req.user,
